@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+# Nautilus script: show_on_desktop_temp
+# Ubuntu 24.04 LTS
+# Temporarily show the contents of a selected folder on the Desktop
+# by creating/removing symlinks. No auto-refresh (press F5 manually).
+
+set -euo pipefail
+
+err() { zenity --error --title="Show on Desktop (temporary)" --text="$1" 2>/dev/null || { echo "ERROR: $1" >&2; }; exit 1; }
+info() { zenity --info --title="Show on Desktop (temporary)" --text="$1" 2>/dev/null || true; }
+notify() { notify-send "Show on Desktop" "$1" || true; }
+
+# Desktop dir (localized-safe)
+if ! DESKTOP_DIR="$(xdg-user-dir DESKTOP 2>/dev/null)"; then
+  DESKTOP_DIR="$HOME/Desktop"
+fi
+[ -d "$DESKTOP_DIR" ] || err "Desktop folder not found: $DESKTOP_DIR"
+
+MARKER_FILE="$DESKTOP_DIR/.tmp_desktop_view_from"
+MANIFEST_FILE="$DESKTOP_DIR/.tmp_desktop_view_manifest"
+
+# First selected folder path from Nautilus
+SEL_PATH=""
+if [ -n "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS:-}" ]; then
+  IFS= read -r SEL_PATH <<< "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS}"
+fi
+
+# Validate selection
+if [ -n "$SEL_PATH" ] && [ ! -d "$SEL_PATH" ]; then
+  err "Selected item is not a folder:\n$SEL_PATH"
+fi
+
+# Don’t allow showing the Desktop itself
+if [ -n "$SEL_PATH" ] && [ "$(realpath -s "$SEL_PATH")" = "$(realpath -s "$DESKTOP_DIR")" ]; then
+  err "You cannot show the Desktop on the Desktop."
+fi
+
+active_view=""
+if [ -f "$MARKER_FILE" ] && [ -f "$MANIFEST_FILE" ]; then
+  active_view="$(cat "$MARKER_FILE" || true)"
+fi
+
+choose_action() {
+  if [ -n "$active_view" ]; then
+    if [ -n "$SEL_PATH" ]; then
+      zenity --list --title="Show on Desktop (temporary)" \
+        --text="Active temporary Desktop view:\n$active_view" \
+        --column="Action" "Clear current view" "Replace with selected folder" "Cancel" 2>/dev/null
+    else
+      zenity --list --title="Show on Desktop (temporary)" \
+        --text="Active temporary Desktop view:\n$active_view" \
+        --column="Action" "Clear current view" "Cancel" 2>/dev/null
+    fi
+  else
+    [ -n "$SEL_PATH" ] && echo "Show selected folder"
+  fi
+}
+
+clear_view() {
+  local removed=0
+  if [ -f "$MANIFEST_FILE" ]; then
+    while IFS= read -r -d '' link; do
+      if [ -L "$link" ] || [ -e "$link" ]; then
+        rm -f -- "$link" && removed=$((removed+1))
+      fi
+    done < <(tr '\n' '\0' < "$MANIFEST_FILE")
+  fi
+  rm -f -- "$MARKER_FILE" "$MANIFEST_FILE"
+  notify "Cleared temporary Desktop view ($removed removed)."
+  info "Cleared.\n\nPress F5 on the Desktop if icons didn’t update."
+}
+
+create_view_from() {
+  local src="$1"
+  [ -d "$src" ] || err "Folder not found:\n$src"
+
+  # Fresh manifest + marker
+  : > "$MANIFEST_FILE"
+  printf "%s\n" "$src" > "$MARKER_FILE"
+
+  local created=0 skipped=0
+  # Immediate children only
+  while IFS= read -r -d '' name; do
+    local target="$src/$name"
+    local linkpath="$DESKTOP_DIR/$name"
+    if [ -e "$linkpath" ] || [ -L "$linkpath" ]; then
+      skipped=$((skipped+1))
+      continue
+    fi
+    ln -s -- "$target" "$linkpath"
+    printf "%s\0" "$linkpath" >> "$MANIFEST_FILE"
+    created=$((created+1))
+  done < <(find "$src" -mindepth 1 -maxdepth 1 -printf '%f\0' | sort -z)
+
+  notify "Showing $(basename "$src") on Desktop: $created link(s) created, $skipped skipped."
+  info "Created $created link(s) from:\n$src\n\nSkipped $skipped (name collision or error).\n\nNow press F5 on the Desktop to refresh."
+}
+
+main() {
+  local action
+  action="$(choose_action || true)"
+  case "$action" in
+    "Clear current view") clear_view ;;
+    "Replace with selected folder") clear_view; create_view_from "$SEL_PATH" ;;
+    "Show selected folder") create_view_from "$SEL_PATH" ;;
+    *) exit 0 ;;
+  esac
+}
+
+main
+
