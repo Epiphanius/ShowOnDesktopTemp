@@ -1,111 +1,240 @@
 #!/usr/bin/env bash
-# Nautilus script: show_on_desktop_temp
-# Ubuntu 24.04 LTS
-# Temporarily show the contents of a selected folder on the Desktop
-# by creating/removing symlinks. No auto-refresh (press F5 manually).
+# Nautilus-Skript: show_on_desktop_temp
+# Lokal (Ubuntu 24.04+)
+# - Rechtsklick auf ORDNER: gesamten Inhalt als Symlinks auf Desktop anzeigen ODER eine Datei daraus wählen.
+# - Rechtsklick auf DATEI(en): nur dafür Symlinks erstellen.
+# - Rechtsklick in freien Bereich eines Ordners (nichts markiert): nimmt automatisch den aktuellen Ordner.
+# - Erneut ausführen zum Leeren/Ersetzen. Zur Aktualisierung F5 auf dem Desktop drücken.
+#
+# Statusdateien + Log: ~/.local/state/show_on_desktop_temp
 
 set -euo pipefail
+PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-err() { zenity --error --title="Show on Desktop (temporary)" --text="$1" 2>/dev/null || { echo "ERROR: $1" >&2; }; exit 1; }
-info() { zenity --info --title="Show on Desktop (temporary)" --text="$1" 2>/dev/null || true; }
-notify() { notify-send "Show on Desktop" "$1" || true; }
+# ---------- Hilfsfunktionen ----------
+zen(){ zenity "$@" 2>/dev/null || return 1; }
+sag_fehler(){ zen --error --title="Auf Desktop anzeigen (temporär)" --text="$1" || { notify-send "Auf Desktop anzeigen" "$1" 2>/dev/null || true; echo "FEHLER: $1" >&2; }; exit 1; }
+sag_info(){ zen --info --title="Auf Desktop anzeigen (temporär)" --text="$1" || true; }
+hinweis(){ notify-send "Auf Desktop anzeigen" "$1" 2>/dev/null || true; }
+log(){ printf '%s %s\n' "$(date '+%F %T')" "$*" >> "$DEBUG_LOG"; }
 
-# Desktop dir (localized-safe)
-if ! DESKTOP_DIR="$(xdg-user-dir DESKTOP 2>/dev/null)"; then
-  DESKTOP_DIR="$HOME/Desktop"
-fi
-[ -d "$DESKTOP_DIR" ] || err "Desktop folder not found: $DESKTOP_DIR"
+# Desktop-Verzeichnis (sprachneutral ermitteln)
+if ! DESKTOP_DIR="$(xdg-user-dir DESKTOP 2>/dev/null)"; then DESKTOP_DIR="$HOME/Desktop"; fi
+[ -d "$DESKTOP_DIR" ] || sag_fehler "Desktop-Ordner nicht gefunden: $DESKTOP_DIR"
 
-MARKER_FILE="$DESKTOP_DIR/.tmp_desktop_view_from"
-MANIFEST_FILE="$DESKTOP_DIR/.tmp_desktop_view_manifest"
+# Status + Log (NICHT auf dem Desktop)
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/show_on_desktop_temp"
+mkdir -p "$STATE_DIR"
+MARKER_FILE="$STATE_DIR/active_from"
+MANIFEST_FILE="$STATE_DIR/manifest.nul"
+DEBUG_LOG="$STATE_DIR/debug.log"
+: > "$DEBUG_LOG"
+log "DESKTOP_DIR=$DESKTOP_DIR"
 
-# First selected folder path from Nautilus
-SEL_PATH=""
+# ---------- Auswahl einlesen ----------
+# 1) Markierte Pfade (lokal)
+AUSGEWAEHLT=()
 if [ -n "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS:-}" ]; then
-  IFS= read -r SEL_PATH <<< "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS}"
+  while IFS= read -r line || [ -n "${line:-}" ]; do
+    [ -n "${line:-}" ] && AUSGEWAEHLT+=("$line")
+  done <<< "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS}"
 fi
 
-# Validate selection
-if [ -n "$SEL_PATH" ] && [ ! -d "$SEL_PATH" ]; then
-  err "Selected item is not a folder:\n$SEL_PATH"
+# 2) Falls leer: markierte file:// URIs (lokal)
+if [ ${#AUSGEWAEHLT[@]} -eq 0 ] && [ -n "${NAUTILUS_SCRIPT_SELECTED_URIS:-}" ]; then
+  while IFS= read -r uri || [ -n "${uri:-}" ]; do
+    [ -z "${uri:-}" ] && continue
+    case "$uri" in
+      file://*)
+        # Pfad robust aus URI ziehen
+        p="$(gio info -a unix::path "$uri" 2>/dev/null | sed -n 's/^ *unix::path: *//p' || true)"
+        [ -z "$p" ] && p="$(printf '%b' "${uri#file://}" | sed 's/%/\\x/g')"
+        [ -n "$p" ] && AUSGEWAEHLT+=("$p")
+        ;;
+      *) : ;; # andere Protokolle ignorieren (hier lokal-only)
+    esac
+  done <<< "${NAUTILUS_SCRIPT_SELECTED_URIS}"
 fi
 
-# Don’t allow showing the Desktop itself
-if [ -n "$SEL_PATH" ] && [ "$(realpath -s "$SEL_PATH")" = "$(realpath -s "$DESKTOP_DIR")" ]; then
-  err "You cannot show the Desktop on the Desktop."
+# 3) Falls noch immer leer: aktuellen Ordner (Rechtsklick in freien Bereich)
+CURRENT_DIR=""
+if [ ${#AUSGEWAEHLT[@]} -eq 0 ] && [ -n "${NAUTILUS_SCRIPT_CURRENT_URI:-}" ]; then
+  case "$NAUTILUS_SCRIPT_CURRENT_URI" in
+    file://*)
+      cdp="$(gio info -a unix::path "$NAUTILUS_SCRIPT_CURRENT_URI" 2>/dev/null | sed -n 's/^ *unix::path: *//p' || true)"
+      [ -z "$cdp" ] && cdp="$(printf '%b' "${NAUTILUS_SCRIPT_CURRENT_URI#file://}" | sed 's/%/\\x/g')"
+      [ -n "$cdp" ] && [ -d "$cdp" ] && CURRENT_DIR="$cdp"
+      ;;
+  esac
 fi
 
-active_view=""
-if [ -f "$MARKER_FILE" ] && [ -f "$MANIFEST_FILE" ]; then
-  active_view="$(cat "$MARKER_FILE" || true)"
+log "ausgewaehlt_count=${#AUSGEWAEHLT[@]} current_dir='$CURRENT_DIR'"
+
+# Wenn weder Auswahl noch Current-Dir: abbrechen
+if [ ${#AUSGEWAEHLT[@]} -eq 0 ] && [ -z "$CURRENT_DIR" ]; then
+  sag_fehler "Keine Auswahl. Rechtsklick auf Ordner/Datei(en) oder in freien Bereich eines Ordners → Skripte → show_on_desktop_temp."
 fi
 
-choose_action() {
-  if [ -n "$active_view" ]; then
-    if [ -n "$SEL_PATH" ]; then
-      zenity --list --title="Show on Desktop (temporary)" \
-        --text="Active temporary Desktop view:\n$active_view" \
-        --column="Action" "Clear current view" "Replace with selected folder" "Cancel" 2>/dev/null
+# In Dateien vs. Ordner trennen
+DATEIEN=() ORDNER=()
+for p in "${AUSGEWAEHLT[@]}"; do
+  if   [ -d "$p" ]; then ORDNER+=("$p")
+  elif [ -f "$p" ]; then DATEIEN+=("$p")
+  fi
+done
+# Fallback: nur Current-Dir
+if [ ${#AUSGEWAEHLT[@]} -eq 0 ] && [ -n "$CURRENT_DIR" ]; then
+  ORDNER+=("$CURRENT_DIR")
+fi
+log "ORDNER=${#ORDNER[@]} DATEIEN=${#DATEIEN[@]}"
+
+# Modus bestimmen
+MODUS=""   # "ordner" oder "dateien"
+SRC_DIR=""
+if [ ${#ORDNER[@]} -eq 1 ] && [ ${#DATEIEN[@]} -eq 0 ]; then
+  MODUS="ordner"; SRC_DIR="${ORDNER[0]}"
+elif [ ${#ORDNER[@]} -eq 0 ] && [ ${#DATEIEN[@]} -ge 1 ]; then
+  MODUS="dateien"
+else
+  sag_fehler "Bitte wählen Sie ENTWEDER GENAU EINEN Ordner ODER eine/mehrere Datei(en) (nicht gemischt)."
+fi
+
+# Schutz: Desktop nicht auf dem Desktop anzeigen
+if [ "$MODUS" = "ordner" ] && [ "$(realpath -s "$SRC_DIR")" = "$(realpath -s "$DESKTOP_DIR")" ]; then
+  sag_fehler "Der Desktop kann nicht auf dem Desktop angezeigt werden."
+fi
+
+# Aktive Ansicht?
+AKTIV=""
+if [ -f "$MARKER_FILE" ] && [ -f "$MANIFEST_FILE" ]; then AKTIV="$(cat "$MARKER_FILE" || true)"; fi
+log "AKTIV='$AKTIV'"
+
+# ---------- Aktionen ----------
+setze_marker_fuer_ordner(){ printf "Ordner: %s\n" "$1" > "$MARKER_FILE"; }
+setze_marker_fuer_dateien(){
+  local count="$#"; local namen=() i
+  for i in "$@"; do namen+=("$(basename -- "$i")"); done
+  local preview; preview="$(printf '%s, ' "${namen[@]:0:5}")"; preview="${preview%, }"
+  printf "Dateien: %d (%s%s)\n" "$count" "$preview" $([ $count -gt 5 ] && echo ", …") > "$MARKER_FILE"
+}
+
+leeren(){
+  local entfernt=0
+  if [ -f "$MANIFEST_FILE" ]; then
+    while IFS= read -r -d '' item; do
+      if [ -L "$item" ] || [ -f "$item" ]; then
+        log "Entferne $item"
+        rm -f -- "$item" && entfernt=$((entfernt+1))
+      fi
+    done < "$MANIFEST_FILE"
+  fi
+  rm -f -- "$MARKER_FILE" "$MANIFEST_FILE" 2>/dev/null || true
+  hinweis "Temporäre Desktop-Ansicht geleert ($entfernt entfernt)."
+  sag_info "Bereinigt.\n\nDrücken Sie F5 auf dem Desktop, falls die Symbole nicht aktualisiert wurden."
+  log "Geleert: entfernt=$entfernt"
+}
+
+erstelle_links_fuer_dateien(){
+  : > "$MANIFEST_FILE"
+  setze_marker_fuer_dateien "$@"
+  local gesamt=0 erstellt=0 uebersprungen=0
+  local pfad basis link
+  for pfad in "$@"; do
+    gesamt=$((gesamt+1))
+    basis="$(basename -- "$pfad")"
+    link="$DESKTOP_DIR/$basis"
+    if [ -e "$link" ] || [ -L "$link" ]; then
+      log "Überspringe (existiert): $link"
+      uebersprungen=$((uebersprungen+1)); continue
+    fi
+    log "ln -s -- $pfad -> $link"
+    ln -s -- "$pfad" "$link"
+    printf "%s\0" "$link" >> "$MANIFEST_FILE"
+    erstellt=$((erstellt+1))
+  done
+  hinweis "Datei-Symlinks auf Desktop: $erstellt erstellt, $uebersprungen übersprungen."
+  sag_info "Erstellt: $erstellt Datei-Link(s).\nÜbersprungen: $uebersprungen (Namenskollision/Fehler).\n\nDrücken Sie F5 zur Aktualisierung."
+  log "erstelle_links_fuer_dateien: gesamt=$gesamt erstellt=$erstellt uebersprungen=$uebersprungen"
+}
+
+erstelle_ansicht_aus_ordner(){
+  local src="$1"
+  : > "$MANIFEST_FILE"
+  setze_marker_fuer_ordner "$src"
+  local erstellt=0 uebersprungen=0 gesamt=0
+  while IFS= read -r -d '' kind; do
+    gesamt=$((gesamt+1))
+    local basis; basis="$(basename -- "$kind")"
+    local link="$DESKTOP_DIR/$basis"
+    if [ -e "$link" ] || [ -L "$link" ]; then
+      log "Überspringe (existiert): $link"
+      uebersprungen=$((uebersprungen+1)); continue
+    fi
+    log "ln -s -- $kind -> $link"
+    ln -s -- "$kind" "$link"
+    printf "%s\0" "$link" >> "$MANIFEST_FILE"
+    erstellt=$((erstellt+1))
+  done < <(find "$src" -mindepth 1 -maxdepth 1 -print0)
+  hinweis "Zeige $(basename "$src") auf dem Desktop: $erstellt Link(s) erstellt, $uebersprungen übersprungen."
+  if [ "$gesamt" -eq 0 ]; then
+    sag_info "Der ausgewählte Ordner ist leer.\n\nDrücken Sie F5 zur Aktualisierung."
+  else
+    sag_info "Erstellt: $erstellt Link(s) aus:\n$src\n\nÜbersprungen: $uebersprungen (Namenskollision/Fehler).\n\nDrücken Sie F5 zur Aktualisierung."
+  fi
+  log "erstelle_ansicht_aus_ordner: gesamt=$gesamt erstellt=$erstellt uebersprungen=$uebersprungen"
+}
+
+waehle_eine_datei_aus_ordner(){
+  local dir="$1"
+  local ausgewaehlt
+  ausgewaehlt="$(zen --file-selection --title='Eine Datei für die Anzeige auf dem Desktop auswählen' --filename="$dir/" || true)"
+  [ -n "${ausgewaehlt:-}" ] || { log "Keine Datei gewählt"; return 1; }
+  [ -f "$ausgewaehlt" ] || sag_fehler "Auswahl ist keine reguläre Datei:\n$ausgewaehlt"
+  erstelle_links_fuer_dateien "$ausgewaehlt"
+}
+
+waehle_aktion(){
+  if [ -n "$AKTIV" ]; then
+    if [ "$MODUS" = "ordner" ]; then
+      zen --list --title="Auf Desktop anzeigen (temporär)" \
+        --text="Aktive temporäre Desktop-Ansicht:\n$AKTIV" \
+        --column="Aktion" \
+        "Aktuelle Ansicht leeren" \
+        "Mit ausgewähltem Ordner ersetzen" \
+        "Mit einer Datei aus diesem Ordner ersetzen" \
+        "Abbrechen"
     else
-      zenity --list --title="Show on Desktop (temporary)" \
-        --text="Active temporary Desktop view:\n$active_view" \
-        --column="Action" "Clear current view" "Cancel" 2>/dev/null
+      zen --list --title="Auf Desktop anzeigen (temporär)" \
+        --text="Aktive temporäre Desktop-Ansicht:\n$AKTIV" \
+        --column="Aktion" \
+        "Aktuelle Ansicht leeren" \
+        "Mit ausgewählten Datei(en) ersetzen" \
+        "Abbrechen"
     fi
   else
-    [ -n "$SEL_PATH" ] && echo "Show selected folder"
-  fi
-}
-
-clear_view() {
-  local removed=0
-  if [ -f "$MANIFEST_FILE" ]; then
-    while IFS= read -r -d '' link; do
-      if [ -L "$link" ] || [ -e "$link" ]; then
-        rm -f -- "$link" && removed=$((removed+1))
-      fi
-    done < <(tr '\n' '\0' < "$MANIFEST_FILE")
-  fi
-  rm -f -- "$MARKER_FILE" "$MANIFEST_FILE"
-  notify "Cleared temporary Desktop view ($removed removed)."
-  info "Cleared.\n\nPress F5 on the Desktop if icons didn’t update."
-}
-
-create_view_from() {
-  local src="$1"
-  [ -d "$src" ] || err "Folder not found:\n$src"
-
-  # Fresh manifest + marker
-  : > "$MANIFEST_FILE"
-  printf "%s\n" "$src" > "$MARKER_FILE"
-
-  local created=0 skipped=0
-  # Immediate children only
-  while IFS= read -r -d '' name; do
-    local target="$src/$name"
-    local linkpath="$DESKTOP_DIR/$name"
-    if [ -e "$linkpath" ] || [ -L "$linkpath" ]; then
-      skipped=$((skipped+1))
-      continue
+    if [ "$MODUS" = "ordner" ]; then
+      zen --list --title="Auf Desktop anzeigen (temporär)" \
+        --text="Was möchten Sie mit folgendem Ordner tun?\n$SRC_DIR" \
+        --column="Aktion" \
+        "Ausgewählten Ordner anzeigen" \
+        "Eine Datei aus diesem Ordner anzeigen" \
+        "Abbrechen"
+    else
+      echo "Ausgewählte Datei(en) anzeigen"
     fi
-    ln -s -- "$target" "$linkpath"
-    printf "%s\0" "$linkpath" >> "$MANIFEST_FILE"
-    created=$((created+1))
-  done < <(find "$src" -mindepth 1 -maxdepth 1 -printf '%f\0' | sort -z)
-
-  notify "Showing $(basename "$src") on Desktop: $created link(s) created, $skipped skipped."
-  info "Created $created link(s) from:\n$src\n\nSkipped $skipped (name collision or error).\n\nNow press F5 on the Desktop to refresh."
+  fi
 }
 
-main() {
-  local action
-  action="$(choose_action || true)"
-  case "$action" in
-    "Clear current view") clear_view ;;
-    "Replace with selected folder") clear_view; create_view_from "$SEL_PATH" ;;
-    "Show selected folder") create_view_from "$SEL_PATH" ;;
-    *) exit 0 ;;
-  esac
-}
-
-main
-
+# ---------- Hauptteil ----------
+aktion="$(waehle_aktion || true)"
+case "$aktion" in
+  "Aktuelle Ansicht leeren") leeren ;;
+  "Mit ausgewähltem Ordner ersetzen") leeren; erstelle_ansicht_aus_ordner "$SRC_DIR" ;;
+  "Mit einer Datei aus diesem Ordner ersetzen") leeren; waehle_eine_datei_aus_ordner "$SRC_DIR" ;;
+  "Ausgewählten Ordner anzeigen") erstelle_ansicht_aus_ordner "$SRC_DIR" ;;
+  "Eine Datei aus diesem Ordner anzeigen") waehle_eine_datei_aus_ordner "$SRC_DIR" ;;
+  "Mit ausgewählten Datei(en) ersetzen") leeren; erstelle_links_fuer_dateien "${DATEIEN[@]}" ;;
+  "Ausgewählte Datei(en) anzeigen") erstelle_links_fuer_dateien "${DATEIEN[@]}" ;;
+  "Abbrechen"|"" ) log "Abgebrochen"; exit 0 ;;
+  * ) log "Unbekannte Aktion -> Ende"; exit 0 ;;
+esac
