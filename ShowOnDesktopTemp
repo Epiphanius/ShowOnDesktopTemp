@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # Nautilus-Skript: show_on_desktop_temp
 # Lokal (Ubuntu 24.04+)
 # - Rechtsklick auf ORDNER: gesamten Inhalt als Symlinks auf Desktop anzeigen ODER eine Datei daraus wählen.
