@@ -18,7 +18,7 @@ This project is **dual-licensed**: **Apache-2.0 OR CC0-1.0** (your choice).
   - Trademark and patent rights are **not** granted by CC0.
 
 **SPDX header** (recommended) at the top of each source file:
-```bash
+
 # SPDX-License-Identifier: Apache-2.0 OR CC0-1.0
 # Copyright (c) 2025 Harald Wenzel
 
