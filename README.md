@@ -17,9 +17,6 @@ This project is **dual-licensed**: **Apache-2.0 OR CC0-1.0** (your choice).
   - Public-domain-like dedication; no attribution or notice required.
   - Trademark and patent rights are **not** granted by CC0.
 
-SPDX header (recommended) at the top of each source file:
-# SPDX-License-Identifier: Apache-2.0 OR CC0-1.0
-# Copyright (c) 2025 Harald Wenzel
 
 # ShowOnDesktopTemp De
 Zeigt vorübergehend den Inhalt eines ausgewählten Ordners oder einer Datei auf deinem Desktop an, ohne etwas zu kopieren. Wie? Es erstellt Symlinks (Verknüpfungen) auf dem Desktop zu den unmittelbaren Unterordnern un Dateien des ausgewählten Ordners und zeichnet genau auf, welche Verknüpfungen es erstellt hat. Verwendung: Klicke in Nautilus mit der rechten Maustaste auf einen Ordner → Skripte → show_on_desktop_temp. Erster Durchlauf: erstellt die temporäre Ansicht auf deinem Desktop. Nächster Durchlauf: bietet an, die aktuelle Ansicht zu löschen oder sie durch einen anderen Ordner zu ersetzen. Sicherheit: Es werden keine echten Dateien gelöscht. Beim Löschen werden nur die erstellten Verknüpfungen entfernt (die in einem versteckten Manifest gespeichert werden). Vorhandene Desktop-Elemente bleiben unberührt; Namenskollisionen werden übersprungen. Hinweise: Drücke F5 auf dem Desktop, wenn die Symbole nicht sofort aktualisiert werden. Das Skript funktioniert auch mit lokalisierten Desktops (verwendet xdg-user-dir DESKTOP) und weigert sich, den Desktop selbst „anzuzeigen“.
