@@ -3,7 +3,7 @@ Temporarily “show” the contents of a chosen folder or file/s on your desktop
 
 Works so far on Ubuntu's latest LTSes with Nautilus. The procedure is to place the script in ~/.local/share/nautilus/scripts/ and enable it with chmod +x. It needs to have a shell extension showing the desktop icons, like the Desktop Icons NG (DING) extension.
 
-## License
+# License
 
 This project is **dual-licensed**: **Apache-2.0 OR CC0-1.0** (your choice).
 
@@ -18,7 +18,6 @@ This project is **dual-licensed**: **Apache-2.0 OR CC0-1.0** (your choice).
   - Trademark and patent rights are **not** granted by CC0.
 
 SPDX header (recommended) at the top of each source file:
-
 # SPDX-License-Identifier: Apache-2.0 OR CC0-1.0
 # Copyright (c) 2025 Harald Wenzel
 
