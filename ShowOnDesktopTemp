@@ -6,7 +6,7 @@
 # - Bei Weitergabe unter Apache-2.0 bitte LICENSE.Apache-2.0 **und** NOTICE beilegen.
 # - Bei Nutzung unter CC0-1.0 bestehen keine Beifügungspflichten. Marken-/Patentrechte bleiben unberührt.
 # Siehe: LICENSE.Apache-2.0, LICENSE.CC0-1.0 und NOTICE: https://github.com/Epiphanius/ShowOnDesktopTemp
-#
+# Erstellt mit Unterstützung eines LLM
 # Nautilus-Skript: show_on_desktop_temp
 # Lokal (Ubuntu 24.04+)
 # - Rechtsklick auf ORDNER: gesamten Inhalt als Symlinks auf Desktop anzeigen ODER eine Datei daraus wählen.
