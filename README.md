@@ -4,6 +4,11 @@ Temporarily “show” the contents of a chosen folder or file/s on your desktop
 
 The procedure is to place the script in ~/.local/share/nautilus/scripts/ and enable it with chmod +x. It needs to have a shell extension showing the desktop icons, like the Desktop Icons NG (DING) extension (https://extensions.gnome.org/extension/2087/desktop-icons-ng-ding/). 
 
+# ShowOnDesktopTemp2
+Added option to show a symlink to/of the containing folder as well. To change the option, see at the beginning of the script:
+CREATE_FOLDER_LINK="${CREATE_FOLDER_LINK:-1}"             # 1=auch Quellordner verlinken (Ordner- & Dateienmodus)
+FOLDER_LINK_SUFFIX="${FOLDER_LINK_SUFFIX:- (Quelle)}"     # Namenszusatz für Quellordner-Link
+
 # License
 
 This project is **dual-licensed**: **Apache-2.0 OR CC0-1.0** (your choice).
@@ -24,6 +29,11 @@ Ein Skript für den Gnome Nautilus Script-Ordner, das auf Ubuntu 24/25.04 getest
 Zeigt vorübergehend den Inhalt eines ausgewählten Ordners oder einer Datei auf deinem Desktop an, ohne etwas zu kopieren. Wie? Es erstellt Symlinks (Verknüpfungen) auf dem Desktop zu den unmittelbaren Unterordnern und Dateien des ausgewählten Ordners und zeichnet genau auf, welche Verknüpfungen es erstellt hat. Verwendung: Klicke in Nautilus mit der rechten Maustaste auf einen Ordner → Skripte → show_on_desktop_temp. Erster Durchlauf: erstellt die temporäre Ansicht auf deinem Desktop. Nächster Durchlauf: bietet an, die aktuelle Ansicht zu löschen oder sie durch einen anderen Ordner zu ersetzen. Sicherheit: Es werden keine echten Dateien gelöscht. Beim Löschen werden nur die erstellten Verknüpfungen entfernt (die in einem versteckten Manifest gespeichert werden). Vorhandene Desktop-Elemente bleiben unberührt; Namenskollisionen werden übersprungen. Hinweise: Drücke F5 auf dem Desktop, wenn die Symbole nicht sofort aktualisiert werden. Das Skript funktioniert auch mit lokalisierten Desktops (verwendet xdg-user-dir DESKTOP) und weigert sich, den Desktop selbst „anzuzeigen“.
 
 Die Installation besteht darin, das Skript in ~/.local/share/nautilus/scripts/ abzulegen und es mit chmod +x ausführbar zu machen. Es muss eine Shell-Erweiterung haben, die die Desktop-Symbole anzeigt, wie die Desktop Icons NG (DING) Erweiterung (https://extensions.gnome.org/extension/2087/desktop-icons-ng-ding/).
+
+# ShowOnDesktopTemp2
+Hat jetzt zusätzlich die Option für die Platzierung eines Symlinks zum Quell-Ordner. Siehe am Anfang des Skripts:
+CREATE_FOLDER_LINK="${CREATE_FOLDER_LINK:-1}"             # 1=auch Quellordner verlinken (Ordner- & Dateienmodus)
+FOLDER_LINK_SUFFIX="${FOLDER_LINK_SUFFIX:- (Quelle)}"     # Namenszusatz für Quellordner-Link
 
 ## Lizenz
 
