@@ -1,19 +1,24 @@
-#! /bin/bash
+#!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0 OR CC0-1.0
 # Copyright (c) 2025 Epiphanius Harald Wenzel
-# Lizenzhinweis:
-# Dieses Projekt ist dual-lizenziert unter **Apache-2.0 ODER CC0-1.0** (nach Ihrer Wahl).
-# - Bei Weitergabe unter Apache-2.0 bitte LICENSE.Apache-2.0 **und** NOTICE beilegen.
-# - Bei Nutzung unter CC0-1.0 bestehen keine Beifügungspflichten. Marken-/Patentrechte bleiben unberührt.
-# Siehe: LICENSE.Apache-2.0, LICENSE.CC0-1.0 und NOTICE: https://github.com/Epiphanius/ShowOnDesktopTemp
-# Erstellt mit Unterstützung eines LLM
-# Nautilus-Skript: show_on_desktop_temp
-# Lokal (Ubuntu 24.04+)
-# - Rechtsklick auf ORDNER: gesamten Inhalt als Symlinks auf Desktop anzeigen ODER eine Datei daraus wählen.
-# - Rechtsklick auf DATEI(en): nur dafür Symlinks erstellen.
-# - Rechtsklick in freien Bereich eines Ordners (nichts markiert): nimmt automatisch den aktuellen Ordner.
-# - Erneut ausführen zum Leeren/Ersetzen. Zur Aktualisierung F5 auf dem Desktop drücken.
 #
+# Projekt: show_on_desktop_temp — Ordnerinhalte/Dateien temporär als Symlinks auf dem Desktop anzeigen
+# Repository: https://github.com/Epiphanius/ShowOnDesktopTemp
+# Autor: Epiphanius Harald Wenzel
+# Danksagung: With the help of a Large Language Model.
+#
+# Lizenz:
+# Dual-Lizenz: Apache-2.0 ODER CC0-1.0 (nach Ihrer Wahl).
+# - Bei Weitergabe unter Apache-2.0: LICENSE.Apache-2.0 und NOTICE beilegen.
+# - Bei Nutzung unter CC0-1.0: keine Beifügung erforderlich. Marken-/Patentrechte unberührt.
+# Siehe: LICENSE.Apache-2.0, LICENSE.CC0-1.0, NOTICE.
+#
+# Nautilus-Skript: show_on_desktop_temp
+# Lokal (Ubuntu/Gnome 24.04+)
+# - ORDNER: gesamten Inhalt als Symlinks anzeigen; optional zusätzlich Link auf den Quellordner.
+# - DATEI(en): nur die Datei(en) verlinken; optional zusätzlich Link(s) auf die/den Quellordner der Datei(en).
+# - Rechtsklick in freien Bereich: aktueller Ordner wird genutzt.
+# - Evtl. zum Aktualisieren F5 auf dem Desktop drücken. Erneut ausführen = Leeren/Ersetzen.
 # Statusdateien + Log: ~/.local/state/show_on_desktop_temp
 
 set -euo pipefail
