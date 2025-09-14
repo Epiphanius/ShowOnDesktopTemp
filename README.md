@@ -9,6 +9,9 @@ Added option to show a symlink to/of the containing folder as well. To change th
 CREATE_FOLDER_LINK="${CREATE_FOLDER_LINK:-1}"             # 1=auch Quellordner verlinken (Ordner- & Dateienmodus)
 FOLDER_LINK_SUFFIX="${FOLDER_LINK_SUFFIX:- (Quelle)}"     # Namenszusatz für Quellordner-Link
 
+# ShowOnDesktopTemp3.sh
+Session-based Desktop symlinks for Nautilus. Add, replace, delete symlinks/symlink-sessions. Gui in English.
+
 # License
 
 This project is **dual-licensed**: **Apache-2.0 OR CC0-1.0** (your choice).
