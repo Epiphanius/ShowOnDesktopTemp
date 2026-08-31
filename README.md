@@ -38,6 +38,10 @@ Hat jetzt zusätzlich die Option für die Platzierung eines Symlinks zum Quell-O
 CREATE_FOLDER_LINK="${CREATE_FOLDER_LINK:-1}"             # 1=auch Quellordner verlinken (Ordner- & Dateienmodus)
 FOLDER_LINK_SUFFIX="${FOLDER_LINK_SUFFIX:- (Quelle)}"     # Namenszusatz für Quellordner-Link
 
+# Als_Desktop_setzen.sh
+Das Skript kommt ebenfalls in ~/.local/share/nautilus/scripts/Als_Desktop_setzen.sh zu liegen; ausführbar machen nicht vergessen. Einen Ordner auswählen, im Kontextmenü Skripte/Als_Desktop_setzen.sh auswählen; setzt dann den Inhalt des ausgewählten Ordners als aktuellen Desktopinhalt; wenn dieselbe Aktion erneut auf einem Nicht-Ordner erfolgt, wird der ursprüngliche Desktopinhalt wieder hergestellt.
+The script is also located in ~/.local/share/nautilus/scripts/Set_as_Desktop.sh; don't forget to make it executable. Select a folder, then choose Scripts/Set_as_Desktop.sh from the context menu; this sets the contents of the selected folder as the current desktop. If you perform the same action again on a non-folder item, the original desktop contents are restored.
+
 ## Lizenz
 
 Dieses Projekt ist **dual-lizenziert**: **Apache-2.0 ODER CC0-1.0** (nach Ihrer Wahl).
@@ -57,6 +61,4 @@ SPDX-Header (empfohlen) am Anfang jeder Quelldatei:
 # SPDX-License-Identifier: Apache-2.0 OR CC0-1.0
 # Copyright (c) 2025 Epiphanius Harald Wenzel
 
-# Als_Desktop_setzen.sh
-Das Skript kommt ebenfalls in ~/.local/share/nautilus/scripts/Als_Desktop_setzen.sh zu liegen; ausführbar machen nicht vergessen. Einen Ordner auswählen, im Kontextmenü Skripte/Als_Desktop_setzen.sh auswählen; setzt dann den Inhalt des ausgewählten Ordners als aktuellen Desktopinhalt; wenn dieselbe Aktion erneut auf einem Nicht-Ordner erfolgt, wird der ursprüngliche Desktopinhalt wieder hergestellt.
-The script is also located in ~/.local/share/nautilus/scripts/Set_as_Desktop.sh; don't forget to make it executable. Select a folder, then choose Scripts/Set_as_Desktop.sh from the context menu; this sets the contents of the selected folder as the current desktop. If you perform the same action again on a non-folder item, the original desktop contents are restored.
+
