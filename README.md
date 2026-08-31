@@ -16,17 +16,6 @@ Session-based Desktop symlinks for Nautilus. Add, replace, delete symlinks/symli
 
 This project is **dual-licensed**: **Apache-2.0 OR CC0-1.0** (your choice).
 
-- If you choose **Apache-2.0**:
-  - Include **LICENSE.Apache-2.0** and **NOTICE** when redistributing.
-  - Preserve copyright and license headers in source form.
-  - Clearly mark **modifications** to files.
-  - Includes a patent grant and standard disclaimers.
-
-- If you choose **CC0-1.0**:
-  - Public-domain-like dedication; no attribution or notice required.
-  - Trademark and patent rights are **not** granted by CC0.
-
-
 # ShowOnDesktopTemp De
 Ein Skript für den Gnome Nautilus Script-Ordner, das auf Ubuntu 24/25.04 getestet wurde, aber auch auf Debian und Fedora zu funktionieren scheint.
 Zeigt vorübergehend den Inhalt eines ausgewählten Ordners oder einer Datei auf deinem Desktop an, ohne etwas zu kopieren. Wie? Es erstellt Symlinks (Verknüpfungen) auf dem Desktop zu den unmittelbaren Unterordnern und Dateien des ausgewählten Ordners und zeichnet genau auf, welche Verknüpfungen es erstellt hat. Verwendung: Klicke in Nautilus mit der rechten Maustaste auf einen Ordner → Skripte → show_on_desktop_temp. Erster Durchlauf: erstellt die temporäre Ansicht auf deinem Desktop. Nächster Durchlauf: bietet an, die aktuelle Ansicht zu löschen oder sie durch einen anderen Ordner zu ersetzen. Sicherheit: Es werden keine echten Dateien gelöscht. Beim Löschen werden nur die erstellten Verknüpfungen entfernt (die in einem versteckten Manifest gespeichert werden). Vorhandene Desktop-Elemente bleiben unberührt; Namenskollisionen werden übersprungen. Hinweise: Drücke F5 auf dem Desktop, wenn die Symbole nicht sofort aktualisiert werden. Das Skript funktioniert auch mit lokalisierten Desktops (verwendet xdg-user-dir DESKTOP) und weigert sich, den Desktop selbst „anzuzeigen“.
@@ -40,6 +29,7 @@ FOLDER_LINK_SUFFIX="${FOLDER_LINK_SUFFIX:- (Quelle)}"     # Namenszusatz für Qu
 
 # Als_Desktop_setzen.sh
 Das Skript kommt ebenfalls in ~/.local/share/nautilus/scripts/Als_Desktop_setzen.sh zu liegen; ausführbar machen nicht vergessen. Einen Ordner auswählen, im Kontextmenü Skripte/Als_Desktop_setzen.sh auswählen; setzt dann den Inhalt des ausgewählten Ordners als aktuellen Desktopinhalt; wenn dieselbe Aktion erneut auf einem Nicht-Ordner erfolgt, wird der ursprüngliche Desktopinhalt wieder hergestellt.
+
 The script is also located in ~/.local/share/nautilus/scripts/Set_as_Desktop.sh; don't forget to make it executable. Select a folder, then choose Scripts/Set_as_Desktop.sh from the context menu; this sets the contents of the selected folder as the current desktop. If you perform the same action again on a non-folder item, the original desktop contents are restored.
 
 ## Lizenz
